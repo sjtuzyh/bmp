@@ -22,16 +22,9 @@ uint8_t fix(float capme)
     return (int8_t)capme;
 }
 
-uint8_t crop(float capme)
-{
-    capme += 0.5;
-    if(capme < 0)
-        return 0;
-    if(capme > 255)
-        return 255;
-    return (int8_t)capme;
-}
-
+// srgb is our reference space, so these are backwards. Sorry~
+// If you plug 0.5 srgb (perceptually close to 50%) into tolinear, you will get a larger value out
+//   because linear is "brighter".
 float tosrgb(float linear)
 {
 	if(linear > 0.04045)
@@ -44,7 +37,7 @@ float tolinear(float srgb)
 	if(srgb > 0.0031308)
 		return 1.055*pow(srgb, 1/2.4) - 0.055;
 	else
-		return srgb*1292;
+		return srgb*12.92;
 }
 
 struct triad
@@ -175,8 +168,8 @@ void makeYCgCoPlane(image& myimage, float luma)
         float g = (cy + cg)/4;
         float b = (temp - co)/4;
         
-        if(r > 255 or g > 255 or b > 255 or
-           r < 0 or g < 0 or b < 0)
+        if(r > 255.0 or g > 255.0 or b > 255.0 or
+           r < 0.0 or g < 0.0 or b < 0.0)
         {
             int out = -1;
             if(r > 255 or g > 255 or b > 255)
@@ -191,9 +184,9 @@ void makeYCgCoPlane(image& myimage, float luma)
         }
         else
         {
-            myimage(x, y).r = crop(r)/255.0;
-            myimage(x, y).g = crop(g)/255.0;
-            myimage(x, y).b = crop(b)/255.0;
+            myimage(x, y).r = r/255.0;
+            myimage(x, y).g = g/255.0;
+            myimage(x, y).b = b/255.0;
         }
     }
 }

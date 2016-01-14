@@ -5,4 +5,4 @@ This C++11 program generates the following images in ppm format:
 
 In sRGB, Linear, and Gamma 3 spaces.
 
-The YCgCo planes are generated using SRGB reference brightness levels, then converted to the other two gammaspaces. Every plane would appear slightly different if they were generated in Gamma 3 or Linear space instead, due to how YCgCo works. *YCgCo is an encoding of arbitrary RGB colorspaces, not a well-defined colorspace in and of itself.*
+The YCgCo planes are generated using SRGB reference brightness levels, then converted to the other two gammaspaces. Every plane would appear slightly different if they were generated in Gamma 3 or Linear space instead, due to how YCgCo works. *YCgCo is an encoding of arbitrary RGB colorspaces, not a well-defined colorspace in and of itself.* For more information, see: http://entropymine.com/imageworsener/grayscale/
