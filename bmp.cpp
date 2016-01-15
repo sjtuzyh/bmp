@@ -22,22 +22,19 @@ uint8_t fix(float capme)
     return (int8_t)capme;
 }
 
-// srgb is our reference space, so these are backwards. Sorry~
-// If you plug 0.5 srgb (perceptually close to 50%) into tolinear, you will get a larger value out
-//   because linear is "brighter".
-float tosrgb(float linear)
-{
-	if(linear > 0.04045)
-		return pow((linear + 0.055)/1.055, 2.4);
-	else
-		return linear/12.92;
-}
 float tolinear(float srgb)
 {
-	if(srgb > 0.0031308)
-		return 1.055*pow(srgb, 1/2.4) - 0.055;
+	if(srgb > 0.04045)
+		return pow((srgb + 0.055)/1.055, 2.4);
 	else
-		return srgb*12.92;
+		return srgb/12.92;
+}
+float tosrgb(float linear)
+{
+	if(linear > 0.0031308)
+		return 1.055*pow(linear, 1/2.4) - 0.055;
+	else
+		return linear*12.92;
 }
 
 struct triad
@@ -60,15 +57,11 @@ struct image
 	unsigned short height;
 	vector<triad> data;
 	
-	bool linear;
-	
 	image()
 	{
 		width = 1;
 		height = 1;
 		data = {triad()};
-		
-		linear = false;
 	}
 	
 	triad& operator()(unsigned short x, unsigned short y)
@@ -86,27 +79,21 @@ struct image
 	
 	void makelinear()
 	{
-		if(linear) return;
-		
 		for(auto& t : data)
 		{
 			t.r = tolinear(t.r);
 			t.g = tolinear(t.g);
 			t.b = tolinear(t.b);
 		}
-		linear = true;
 	}
 	void makesrgb()
 	{
-		if(!linear) return;
-		
 		for(auto& t : data)
 		{
 			t.r = tosrgb(t.r);
 			t.g = tosrgb(t.g);
 			t.b = tosrgb(t.b);
 		}
-		linear = false;
 	}
 	void applygamma(float g)
 	{
@@ -132,9 +119,6 @@ struct image
 		printf("writing file %s\n", filename);
 		if(file != NULL)
 		{
-			bool waslinear = linear;
-			makesrgb();
-			
 			printf("w h : %d %d\n", width, height);
 			fprintf(file, "P6 %d %d 255\n", width, height);
 			for(auto& t : data)
@@ -143,8 +127,6 @@ struct image
 				fputc(fix(t.g), file);
 				fputc(fix(t.b), file);
 			}
-			
-			if(waslinear) makelinear();
 		
 			fclose(file);
 		}
@@ -199,32 +181,31 @@ int main()
 	{
 		for(auto y = 0; y < myimage.height; y++)
 		{
-			myimage(x, y).r = x/255.0;
-			myimage(x, y).g = y/255.0;
-			myimage(x, y).b = (255-max(x,y))/255.0;
+			myimage(x, y).r = x/255.0 * ((510-y)/510.0);
+			myimage(x, y).g = y/255.0 * ((510-x)/510.0);
+			myimage(x, y).b = 1.0 - myimage(x, y).r - myimage(x, y).g;
 		}
 	}
-	myimage.writefile("srgb std test.ppm");
-	myimage.makelinear();
-	myimage.linear = false;
-	myimage.writefile("linear std test.ppm");
-	myimage.applygamma(3.0);
-	myimage.writefile("visual std test.ppm");
+	myimage.writefile("std test, naiive.ppm");
+	// linear converted to srgb for even display of color shifts
+	myimage.makesrgb();
+	myimage.writefile("std test, linear.ppm");
 	
-	
-	
+	int c;
 	for(int c = 1; c < 8; c++)
 	{
+		std::string filename;
 		makeYCgCoPlane(myimage, c/8.0);
 		
-		std::string filename;
-		filename = "YCgCo " + to_string(c) + "／8 Y, srgb.ppm";
+		filename = "YCgCo " + to_string(c) + "／8 Y, naiive.ppm";
 		myimage.writefile(filename.data());
-		myimage.makelinear();
-		myimage.linear = false;
+		
+	    myimage.makesrgb();
 		filename = "YCgCo " + to_string(c) + "／8 Y, linear.ppm";
 		myimage.writefile(filename.data());
-		myimage.applygamma(3.0);
+		
+		makeYCgCoPlane(myimage, pow(c/8.0, 3.0));
+	    myimage.makesrgb();
 		filename = "YCgCo " + to_string(c) + "／8 Y, visual.ppm";
 		myimage.writefile(filename.data());
 	}
